@@ -1,56 +1,79 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { axiosWithAuth } from "../utils/axiosWithAuth";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { axiosWithAuth } from "./AxiosAuth";
+import {Input, Button} from 'semantic-ui-react';
 
-const Login = (props) => {
-    const [login, setLogin] = useState({
-        username: "",
-        password: ""
-    });
+const Login = props => {
+  const [user, setUser] = useState({
+    username: "",
+    password: ""
+  });
+  const [display, setDisplay] = useState(false);
 
-    const handleChange = e => {
-        setLogin({ ...login, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = e => {
-        e.preventDefault();
-        console.log("Form entered this: ", login);
-
-        axiosWithAuth()
-            .post(`http://localhost:5000/api/login`, login)
-            .then(res => {
-                localStorage.setItem("token", res.data.payload);
-                props.history.push("/friends");
-            })
-            .catch(err => console.log("Error in Login: ", err.response.data.error));
-
-        setLogin({
-            username: "",
-            password: ""
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      axiosWithAuth()
+        .get("friends")
+        .then(res => {
+          props.setLogged(false);
+          props.history.push("/friends");
+        })
+        .catch(err => {
+          localStorage.setItem("token", null);
+          props.setLogged(true);
+          setDisplay(true);
         });
-    };
-    return (
-        <div className="login">
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    value={login.username}
-                    name="username"
-                    placeholder="Username"
-                    onChange={handleChange}
-                />
-                <input
-                    type="password"
-                    value={login.password}
-                    name="password"
-                    placeholder="Password"
-                    onChange={handleChange}
-                />
-                <button>Log On!</button>
-            </form>
-            <Link to="/">Home Page</Link>
-        </div>
-    );
+    } else {
+      setDisplay(true);
+    }
+  }, []);
+
+  const handleSubmit = e => {
+    e.preventDefault();
+
+    axiosWithAuth()
+      .post("login", user)
+      .then(res => {
+        localStorage.setItem("token", res.data.payload);
+        props.setLogged(false);
+        props.history.push("/friends");
+      })
+      .catch(err => {
+        props.setLogged(true);
+        console.log("ERROR", err);
+      });
+  };
+
+  const handleChange = e => {
+    setUser({
+      ...user,
+      [e.target.name]: e.target.value
+    });
+  };
+  return (
+    <div>
+      {display && (
+        <form onSubmit={handleSubmit}>
+          <Input
+            type="text"
+            name="username"
+            placeholder="Enter username"
+            value={user.username}
+            onChange={handleChange}
+          />
+          <Input
+            type="password"
+            name="password"
+            placeholder="Enter Password"
+            value={user.password}
+            onChange={handleChange}
+          />
+          <Button>Submit</Button>
+        </form>
+      )}
+    </div>
+  );
 };
 
 export default Login;
